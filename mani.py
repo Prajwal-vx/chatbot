@@ -49,6 +49,10 @@ import sys
 import time
 from datetime import datetime, timedelta
 from pathlib import Path
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from openai import OpenAI
 
 APP_DIR = Path(__file__).resolve().parent
 CONFIG_PATH = APP_DIR / "config.json"
@@ -84,7 +88,7 @@ PERSONAS = {
 
 # Matches the common WhatsApp export line format: "[HH:MM, D/M/YY] Sender: text"
 SIMPLE_LINE_RE = re.compile(
-    r"\[\d{1,2}:\d{2}.*?\]\s*(?P<sender>[^:]+):\s*(?P<text>.*)"
+    r"^\[[^\]]+\]\s*(?P<sender>[^:]+):\s*(?P<text>.*)$"
 )
 
 
@@ -139,17 +143,26 @@ def calibrate():
     print(f"Saved to {CONFIG_PATH.resolve()}")
 
 
-def parse_last_message(chat_text: str):
+def parse_last_message(chat_text: str) -> tuple[str | None, str | None]:
     """Return (sender, text) of the last message in the chat log, or (None, None)."""
-    lines = [l for l in chat_text.strip().split("\n") if l.strip()]
-    for line in reversed(lines):
-        m = SIMPLE_LINE_RE.match(line.strip())
+    last_sender = None
+    last_text = None
+    for line in chat_text.splitlines():
+        stripped_line = line.strip()
+        if not stripped_line:
+            continue
+        m = SIMPLE_LINE_RE.match(stripped_line)
         if m:
-            return m.group("sender").strip(), m.group("text").strip()
-    return None, None
+            last_sender = m.group("sender").strip()
+            last_text = m.group("text").strip()
+        elif last_sender is not None and last_text is not None:
+            last_text += "\n" + stripped_line
+    return last_sender, last_text
 
 
-def generate_reply(client: OpenAI, chat_history: str, persona: str, retries=3) -> str:
+def generate_reply(client: OpenAI, chat_history: str, persona: str, retries: int = 3) -> str:
+    if retries < 1:
+        raise ValueError("retries must be at least 1")
     system_prompt = PERSONAS.get(persona, PERSONAS["savage"])
     delay = 2
     for attempt in range(1, retries + 1):
@@ -244,7 +257,7 @@ def main():
 
     paused = False
     last_reply_time = datetime.min
-    last_seen_text = None
+    last_seen_chat = None
 
     dry_run = not args.send
     log(f"Starting bot | persona={args.persona} send_enabled={args.send}")
@@ -254,11 +267,13 @@ def main():
     while True:
         time.sleep(args.poll)
         chat_text = copy_chat_text(config)
+        if not chat_text.strip() or chat_text == last_seen_chat:
+            continue
+        last_seen_chat = chat_text
         sender, text = parse_last_message(chat_text)
 
-        if text is None or text == last_seen_text:
-            continue  # nothing new
-        last_seen_text = text
+        if text is None:
+            continue
 
         if text.strip().lower() == "/pause":
             paused = True
