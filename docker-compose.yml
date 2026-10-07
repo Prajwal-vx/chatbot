@@ -1,0 +1,64 @@
+services:
+  api:
+    build: .
+    command: ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
+    env_file: .env
+    environment:
+      DATABASE_URL: postgresql+psycopg://assistant:assistant@postgres:5432/assistant
+      REDIS_URL: redis://redis:6379/0
+      OLLAMA_BASE_URL: http://host.docker.internal:11434/v1
+    ports: ["8000:8000"]
+    restart: unless-stopped
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+      redis:
+        condition: service_healthy
+  worker:
+    build: .
+    command: ["python", "-m", "app.worker"]
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      DATABASE_URL: postgresql+psycopg://assistant:assistant@postgres:5432/assistant
+      REDIS_URL: redis://redis:6379/0
+      OLLAMA_BASE_URL: http://host.docker.internal:11434/v1
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+      redis:
+        condition: service_healthy
+  migrate:
+    build: .
+    command: ["alembic", "upgrade", "head"]
+    env_file: .env
+    environment:
+      DATABASE_URL: postgresql+psycopg://assistant:assistant@postgres:5432/assistant
+    depends_on:
+      postgres:
+        condition: service_healthy
+  postgres:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_DB: assistant
+      POSTGRES_USER: assistant
+      POSTGRES_PASSWORD: assistant
+    ports: ["5432:5432"]
+    volumes: ["postgres_data:/var/lib/postgresql/data"]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U assistant -d assistant"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    restart: unless-stopped
+  redis:
+    image: redis:7-alpine
+    ports: ["6379:6379"]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    restart: unless-stopped
+volumes:
+  postgres_data:

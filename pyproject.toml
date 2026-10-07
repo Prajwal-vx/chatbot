@@ -1,0 +1,26 @@
+[project]
+name = "whatsapp-ai-assistant"
+version = "0.1.0"
+description = "Multilingual WhatsApp assistant using Meta's official Cloud API"
+requires-python = ">=3.11"
+dependencies = [
+  "fastapi>=0.115,<1",
+  "uvicorn[standard]>=0.34,<1",
+  "pydantic-settings>=2.7,<3",
+  "sqlalchemy>=2.0,<3",
+  "psycopg[binary]>=3.2,<4",
+  "redis>=5,<7",
+  "httpx>=0.28,<1",
+  "openai>=1.60,<4",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=8.3,<9", "pytest-asyncio>=0.25,<2", "ruff>=0.9,<1", "mypy>=1.14,<2", "pip-audit>=2.7,<3", "alembic>=1.14,<2"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+asyncio_mode = "auto"

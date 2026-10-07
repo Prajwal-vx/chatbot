@@ -1,0 +1,1 @@
+Review authentication, authorization, secrets, webhook verification, prompt injection, database access, rate limiting, memory privacy, and media handling. Do not change code unless explicitly assigned.
