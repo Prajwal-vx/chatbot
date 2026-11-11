@@ -1,6 +1,7 @@
-import json
 import hashlib
-from typing import Any
+import json
+from collections.abc import Awaitable
+from typing import Any, cast
 
 from redis.asyncio import Redis
 
@@ -19,16 +20,19 @@ async def enqueue_once(redis: Redis, message: dict[str, Any], ttl_seconds: int =
     end
     return 0
     """
-    result = await redis.eval(
-        script,
-        2,
-        f"whatsapp:seen:{message['message_id']}",
-        QUEUE_NAME,
-        ttl_seconds,
-        json.dumps(message, ensure_ascii=False),
-        QUEUE_MAX_LENGTH,
+    result = cast(
+        Awaitable[Any],
+        redis.eval(
+            script,
+            2,
+            f"whatsapp:seen:{message['message_id']}",
+            QUEUE_NAME,
+            str(ttl_seconds),
+            json.dumps(message, ensure_ascii=False),
+            str(QUEUE_MAX_LENGTH),
+        ),
     )
-    return result == 1
+    return await result == 1
 
 
 async def ensure_group(redis: Redis) -> None:

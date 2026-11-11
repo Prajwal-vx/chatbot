@@ -253,7 +253,7 @@ async def save_whatsapp_number(
 
 @app.get("/admin/conversations", dependencies=[Depends(require_admin)])
 async def admin_conversations(
-    session: AsyncSession = Depends(get_session)
+    session: AsyncSession = Depends(get_session),
 ) -> list[dict[str, object]]:
     rows = (
         await session.execute(

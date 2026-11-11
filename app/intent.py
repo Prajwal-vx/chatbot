@@ -2,7 +2,7 @@ import re
 
 from app.tools.calculator import calculate
 
-_TIME_INTENT = re.compile(r"\b(time is it|current time|what time|समय कति|कितने बजे)\b", re.I)
+_TIME_INTENT = re.compile(r"\b(time is it|current time|what time|समय कति|कितने बजे)\b", re.IGNORECASE)
 _CALC_INTENT = re.compile(r"[0-9][0-9.() +*/%\-]*[+*/%\-][0-9.() +*/%\-]*")
 
 

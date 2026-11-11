@@ -1,8 +1,14 @@
 import ast
 import math
 import operator
+from collections.abc import Callable
+from typing import TypeAlias
 
-_BINARY = {
+Number: TypeAlias = int | float
+BinaryOperator: TypeAlias = Callable[[Number, Number], Number]
+UnaryOperator: TypeAlias = Callable[[Number], Number]
+
+_BINARY: dict[type[ast.operator], BinaryOperator] = {
     ast.Add: operator.add,
     ast.Sub: operator.sub,
     ast.Mult: operator.mul,
@@ -11,7 +17,7 @@ _BINARY = {
     ast.Mod: operator.mod,
     ast.Pow: operator.pow,
 }
-_UNARY = {ast.UAdd: operator.pos, ast.USub: operator.neg}
+_UNARY: dict[type[ast.unaryop], UnaryOperator] = {ast.UAdd: operator.pos, ast.USub: operator.neg}
 
 
 def calculate(expression: str) -> int | float:
@@ -25,7 +31,9 @@ def calculate(expression: str) -> int | float:
     def visit(node: ast.AST) -> int | float:
         if isinstance(node, ast.Expression):
             return visit(node.body)
-        if isinstance(node, ast.Constant) and type(node.value) in (int, float):
+        if isinstance(node, ast.Constant) and isinstance(node.value, (int, float)):
+            if type(node.value) not in (int, float):
+                raise ValueError("Only basic arithmetic is supported")
             if abs(node.value) > 1e12:
                 raise ValueError("Number is outside the supported range")
             return node.value

@@ -1,7 +1,8 @@
 """Create conversation, message, and explicit memory tables."""
 
-from alembic import op
 import sqlalchemy as sa
+
+from alembic import op
 
 revision = "0001_initial_schema"
 down_revision = None

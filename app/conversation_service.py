@@ -1,11 +1,13 @@
 from datetime import UTC, datetime
+from typing import Any, cast
 
 from sqlalchemy import delete, select
 from sqlalchemy.dialects.postgresql import insert
+from sqlalchemy.engine import CursorResult
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models import Conversation, Memory, Message
 from app.language import control_language
+from app.models import Conversation, Memory, Message
 
 
 async def get_conversation(session: AsyncSession, sender: str) -> Conversation:
@@ -33,7 +35,7 @@ async def save_inbound(
     )
     result = await session.execute(statement)
     await session.commit()
-    return conversation, result.rowcount == 1
+    return conversation, cast(CursorResult[Any], result).rowcount == 1
 
 
 async def get_context(
@@ -125,4 +127,4 @@ async def forget_all_data(session: AsyncSession, conversation: Conversation) -> 
 async def delete_expired_conversations(session: AsyncSession, older_than: datetime) -> int:
     result = await session.execute(delete(Conversation).where(Conversation.updated_at < older_than))
     await session.commit()
-    return int(result.rowcount or 0)
+    return int(cast(CursorResult[Any], result).rowcount or 0)
